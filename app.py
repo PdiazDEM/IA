@@ -17,6 +17,7 @@ st.write("Predicción de lluvia basada en XGBoost Híbrido (Histórico + Pronós
 # --- 2. CARGAR MODELOS ---
 @st.cache_resource
 def load_models():
+    # Asegúrate de que estos archivos estén subidos en el mismo lugar que app.py
     modelo = joblib.load('modelo_lluvia_v3.joblib')
     scaler = joblib.load('scaler_lluvia_v3.joblib')
     return modelo, scaler
@@ -24,30 +25,39 @@ def load_models():
 try:
     modelo, scaler = load_models()
     st.success("✅ Cerebro IA cargado correctamente.")
-except:
-    st.error("❌ No se encontraron los archivos .joblib. Asegúrate de subirlos.")
+except Exception as e:
+    st.error(f"❌ Error al cargar modelos: {e}")
+    st.info("Asegúrate de haber subido 'modelo_lluvia_v3.joblib' y 'scaler_lluvia_v3.joblib' al repositorio.")
     st.stop()
 
 # --- 3. OBTENER HISTORIA RECIENTE (METEOSTAT) ---
-# Necesitamos los últimos 3 días reales para la "memoria" del modelo
 def get_history():
     # Estación Pudahuel
     station_id = '85574' 
     end = datetime.now()
-    start = end - timedelta(days=10) # Pedimos 10 días por seguridad
+    start = end - timedelta(days=15) # Pedimos 15 días para asegurar datos
     
     data = Daily(station_id, start, end)
     df = data.fetch()
     
     # Preparación idéntica al entrenamiento
     if 'pres' not in df.columns: df['pres'] = 1013.25
+    
+    # Rellenar datos faltantes
     df = df[['tavg', 'tmin', 'tmax', 'prcp', 'pres']].ffill()
     df['pres'] = df['pres'].fillna(1013.25)
     df['prcp'] = df['prcp'].fillna(0)
+    
+    # Crear variable objetivo (para coherencia con la memoria)
     df['lloviendo_hoy'] = (df['prcp'] > 0.1).astype(int)
     df = df.rename(columns={'prcp': 'prcp_hoy'})
     
-    return df.tail(3) # Devolvemos solo los últimos 3 días
+    # Si por retraso de la estación no hay datos recientes, usamos los últimos disponibles
+    if len(df) < 3:
+        st.error("⚠️ La estación meteorológica no tiene suficientes datos recientes.")
+        st.stop()
+        
+    return df.tail(3) # Devolvemos solo los últimos 3 días necesarios para los lags
 
 # --- 4. OBTENER PRONÓSTICO FUTURO (OPEN-METEO) ---
 def get_forecast():
@@ -98,40 +108,43 @@ if st.button("🔮 Calcular Probabilidad de Lluvia"):
             st.error(f"Error al obtener datos externos: {e}")
             st.stop()
 
-        # B. Bucle de Predicción (Tu lógica maestra)
+        # B. Bucle de Predicción
         cols_base = ['tavg', 'tmin', 'tmax', 'prcp_hoy', 'lloviendo_hoy', 'pres']
-        features = ['lag_1', 'lag_2', 'lag_3', 'media_movil_7d', # OJO: Si usaste media movil, añade la lógica, si no, quítala. 
-                    # Asumiré las features de tu última versión v3.0:
-                    'tavg_lag_1', 'tavg_lag_2', 'tavg_lag_3',
-                    'tmin_lag_1', 'tmin_lag_2', 'tmin_lag_3',
-                    'tmax_lag_1', 'tmax_lag_2', 'tmax_lag_3',
-                    'prcp_hoy_lag_1', 'prcp_hoy_lag_2', 'prcp_hoy_lag_3',
-                    'lloviendo_hoy_lag_1', 'lloviendo_hoy_lag_2', 'lloviendo_hoy_lag_3',
-                    'pres_lag_1', 'pres_lag_2', 'pres_lag_3',
-                    'dia_año_sen', 'dia_año_cos', 'dia_sem_sen', 'dia_sem_cos']
         
-        # NOTA: Ajusta la lista 'features' ARRIBA para que sea IDÉNTICA 
-        # a la que usaste en la Celda 7 de tu entrenamiento.
+        # --- LISTA MAESTRA DE FEATURES (COPIADA DE COLAB) ---
+        features = [
+            'tavg', 'tmin', 'tmax', 'pres', 
+            'dia_año_sen', 'dia_año_cos', 'dia_sem_sen', 'dia_sem_cos', 
+            'tavg_lag_1', 'tavg_lag_2', 'tavg_lag_3', 
+            'tmin_lag_1', 'tmin_lag_2', 'tmin_lag_3', 
+            'tmax_lag_1', 'tmax_lag_2', 'tmax_lag_3', 
+            'prcp_hoy_lag_1', 'prcp_hoy_lag_2', 'prcp_hoy_lag_3', 
+            'lloviendo_hoy_lag_1', 'lloviendo_hoy_lag_2', 'lloviendo_hoy_lag_3', 
+            'pres_lag_1', 'pres_lag_2', 'pres_lag_3'
+        ]
         
         predicciones = []
         
         for i in range(1, 8):
             datos_input = pd.DataFrame(index=[0])
             
-            # Datos del día
+            # 1. Datos del día (Pronóstico)
             datos_input['tavg'] = pronostico['tavg'][i]
             datos_input['tmin'] = pronostico['tmin'][i]
             datos_input['tmax'] = pronostico['tmax'][i]
             datos_input['pres'] = pronostico['pres'][i]
-            datos_input['prcp_hoy'] = 0.0; datos_input['lloviendo_hoy'] = 0
             
-            # Lags
+            # (Variables auxiliares, no usadas directamente por el modelo salvo en lags futuros)
+            datos_input['prcp_hoy'] = 0.0
+            datos_input['lloviendo_hoy'] = 0
+            
+            # 2. Lags (Historia)
             for col in cols_base:
                 datos_input[f'{col}_lag_1'] = memoria_df.iloc[-1][col]
                 datos_input[f'{col}_lag_2'] = memoria_df.iloc[-2][col]
                 datos_input[f'{col}_lag_3'] = memoria_df.iloc[-3][col]
             
-            # Cíclicos
+            # 3. Cíclicos (Fecha)
             fecha = pronostico['fechas'][i]
             da = fecha.dayofyear; ds = fecha.dayofweek
             datos_input['dia_año_sen'] = np.sin(2*np.pi*da/366)
@@ -139,20 +152,20 @@ if st.button("🔮 Calcular Probabilidad de Lluvia"):
             datos_input['dia_sem_sen'] = np.sin(2*np.pi*ds/7)
             datos_input['dia_sem_cos'] = np.cos(2*np.pi*ds/7)
             
-            # Relleno y orden
-            # Importante: El scaler espera las columnas en orden exacto
-            # Aquí hacemos un truco para asegurar que todas existan
+            # 4. Asegurar que todas las columnas existen y están en orden
             for f in features:
                 if f not in datos_input.columns: datos_input[f] = 0
+            
+            # FILTRAR Y ORDENAR (CRUCIAL PARA EVITAR EL ERROR)
             datos_input = datos_input[features]
             
-            # Predecir
+            # 5. Predecir
             datos_scaled = scaler.transform(datos_input)
             prob = modelo.predict_proba(datos_scaled)[0][1]
             
             predicciones.append({'Fecha': fecha, 'Probabilidad': prob, 'T_Max': pronostico['tmax'][i]})
             
-            # Actualizar memoria
+            # 6. Actualizar memoria (Ventana deslizante)
             nueva_fila = pd.DataFrame([{
                 'tavg': pronostico['tavg'][i], 'tmin': pronostico['tmin'][i],
                 'tmax': pronostico['tmax'][i], 'pres': pronostico['pres'][i],
