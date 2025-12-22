@@ -9,100 +9,118 @@ import openmeteo_requests
 import requests_cache
 from retry_requests import retry
 
-# --- 1. CONFIGURACIÓN VISUAL (UX/UI) ---
+# --- 1. CONFIGURACIÓN VISUAL (ESTILO CLARO / LIGHT MODE) ---
 st.set_page_config(page_title="MetAI Huechuraba", page_icon="⛈️", layout="centered")
 
-# URL directa al logo
-LOGO_URL = "https://www.huechuraba.cl/imagenes/logo_huechuraba.png"
+# URL de tu logo nuevo
+LOGO_URL = "https://i.imgur.com/HjqQolt.png"
 
 st.markdown("""
     <style>
-    /* 1. FONDO OSCURO CLEAN (Estilo GitHub Dark) */
+    /* 1. FONDO GENERAL (Gris Suave Profesional) */
     .stApp {
-        background-color: #0d1117;
+        background-color: #F0F2F6;
+        color: #1F2937;
     }
 
-    /* 2. FORZAR TEXTO BLANCO */
-    h1, h2, h3, h4, h5, h6, p, span, div, label {
-        color: #e6edf3 !important;
-        font-family: 'Helvetica Neue', sans-serif;
+    /* 2. TIPOGRAFÍA Y TEXTOS */
+    h1, h2, h3, h4 {
+        color: #111827 !important;
+        font-family: 'Inter', sans-serif;
+        font-weight: 700;
+    }
+    p, label, div {
+        color: #374151;
     }
 
-    /* 3. ARREGLO DE NÚMEROS (MÉTRICAS) */
+    /* 3. CONTENEDORES / TARJETAS (Efecto "Card" Blanco) */
     div[data-testid="metric-container"] {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 8px;
+        background-color: #FFFFFF; /* Fondo blanco */
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
         padding: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
     div[data-testid="metric-container"] > div:nth-child(2) {
-        color: #ffffff !important;
-        font-weight: bold;
+        color: #1F2937 !important; /* Número oscuro fuerte */
+        font-weight: 800;
     }
     div[data-testid="metric-container"] > label {
-        color: #8b949e !important;
+        color: #6B7280 !important; /* Etiqueta gris medio */
     }
 
-    /* 4. ESTILO DE LA TABLA (Para que se vea bien en oscuro) */
-    [data-testid="stDataFrame"] {
-        background-color: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 10px;
-        padding: 10px;
-    }
-
-    /* 5. BANNER AFTER SCHOOL */
+    /* 4. BANNER AFTER SCHOOL (Estilo Institucional) */
     .after-school-box {
-        background-color: #1f6feb;
-        color: white;
-        padding: 15px;
-        border-radius: 10px;
+        background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); /* Azul degradado */
+        color: white !important;
+        padding: 20px;
+        border-radius: 12px;
         text-align: center;
-        margin-bottom: 20px;
-        font-weight: 500;
-        border: 1px solid #388bfd;
-        box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3);
+        margin-bottom: 25px;
+        box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+    }
+    .after-school-box strong {
+        color: white !important;
+        font-size: 1.1em;
+    }
+    .after-school-box span {
+        color: #DBEAFE !important;
     }
 
-    /* 6. BOTÓN PRINCIPAL */
+    /* 5. BOTÓN PRINCIPAL */
     .stButton>button {
         width: 100%;
-        background-color: #238636;
+        background-color: #10B981; /* Verde esmeralda */
         color: white !important;
         font-weight: bold;
         border: none;
-        border-radius: 6px;
-        padding: 12px;
+        border-radius: 8px;
+        padding: 14px;
+        font-size: 16px;
         transition: all 0.2s;
+        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
     }
     .stButton>button:hover {
-        background-color: #2ea043;
-        transform: scale(1.02);
+        background-color: #059669;
+        transform: translateY(-2px);
+    }
+
+    /* 6. TABLA DE DATOS (Estilo limpio) */
+    [data-testid="stDataFrame"] {
+        background-color: white;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #E5E7EB;
+    }
+    
+    /* 7. AJUSTES DEL LOGO */
+    .logo-img {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 100%;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. HEADER CON LOGO Y TÍTULO ---
-col_head1, col_head2 = st.columns([1, 4])
+# --- 2. HEADER CON TU LOGO ---
+col_logo, col_text = st.columns([1, 3])
 
-with col_head1:
-    try:
-        st.image(LOGO_URL, width=100)
-    except:
-        st.write("🏛️")
+with col_logo:
+    # Usamos HTML para controlar mejor el tamaño y centrado del logo
+    st.markdown(f'<img src="{LOGO_URL}" class="logo-img" width="130">', unsafe_allow_html=True)
 
-with col_head2:
+with col_text:
+    st.markdown("<div style='padding-top: 10px;'>", unsafe_allow_html=True)
     st.markdown("# MetAI Huechuraba")
     st.markdown("##### Inteligencia Artificial Meteorológica")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # --- 3. MENCIÓN PROGRAMA AFTER SCHOOL ---
 st.markdown("""
 <div class="after-school-box">
     🚀 <strong>Programa After School - Municipalidad de Huechuraba</strong><br>
-    <span style="font-size: 0.9em; opacity: 0.9;">
-    Proyecto de Ciencia de Datos desarrollado por estudiantes para la comunidad.
-    </span>
+    <span>Innovación y Ciencia de Datos al servicio de la comunidad.</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -118,7 +136,7 @@ def load_models():
 modelo, scaler = load_models()
 
 if modelo is None:
-    st.error("⚠️ Error de sistema: No se encontraron los modelos IA.")
+    st.error("⚠️ Error: No se encuentran los archivos del modelo IA.")
     st.stop()
 
 # --- 5. LÓGICA DE DATOS (Backend) ---
@@ -127,8 +145,7 @@ def get_history():
         data = Daily('85574', datetime.now() - timedelta(days=15), datetime.now())
         df = data.fetch()
         if 'pres' not in df.columns: df['pres'] = 1013.25
-        df = df[['tavg', 'tmin', 'tmax', 'prcp', 'pres']].ffill()
-        df = df.fillna({'pres': 1013.25, 'prcp': 0})
+        df = df[['tavg', 'tmin', 'tmax', 'prcp', 'pres']].ffill().fillna({'pres': 1013.25, 'prcp': 0})
         df['lloviendo_hoy'] = (df['prcp'] > 0.1).astype(int)
         df = df.rename(columns={'prcp': 'prcp_hoy'})
         return df.tail(3) if len(df) >= 3 else None
@@ -159,19 +176,19 @@ def get_forecast():
         return d
     except: return None
 
-# --- 6. INTERFAZ DE USUARIO ---
+# --- 6. INTERFAZ ---
 
 col_b1, col_b2, col_b3 = st.columns([1, 2, 1])
 with col_b2:
     btn_calc = st.button("ANALIZAR CLIMA AHORA")
 
 if btn_calc:
-    with st.spinner("📡 Conectando con satélites y ejecutando modelo..."):
+    with st.spinner("📡 Procesando datos satelitales..."):
         memoria = get_history()
         futuro = get_forecast()
         
         if memoria is None or futuro is None:
-            st.warning("⚠️ Sin conexión a datos meteorológicos. Intenta más tarde.")
+            st.warning("⚠️ Sin conexión a datos externos.")
             st.stop()
 
         features_list = [
@@ -184,7 +201,6 @@ if btn_calc:
             'lloviendo_hoy_lag_1', 'lloviendo_hoy_lag_2', 'lloviendo_hoy_lag_3', 
             'pres_lag_1', 'pres_lag_2', 'pres_lag_3'
         ]
-        
         cols_base = ['tavg', 'tmin', 'tmax', 'prcp_hoy', 'lloviendo_hoy', 'pres']
         res = []
 
@@ -217,7 +233,7 @@ if btn_calc:
 
         df = pd.DataFrame(res)
         
-        # --- RESULTADOS ---
+        # --- DISPLAY RESULTADOS ---
         st.markdown("---")
         hoy = df.iloc[0]
         st.markdown(f"### 📅 Pronóstico: {hoy['Fecha'].strftime('%A %d')}")
@@ -228,38 +244,43 @@ if btn_calc:
         
         with c3:
             st.write("")
-            if hoy['Prob'] > 0.5: st.error("☔ LLUVIA")
+            if hoy['Prob'] > 0.5: st.error("☔ ALTO RIESGO")
             elif hoy['Prob'] > 0.2: st.warning("☁️ POSIBLE")
             else: st.success("☀️ SECO")
 
-        # GRÁFICO
+        # GRÁFICO (Estilo Light)
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("#### Tendencia Semanal")
+        
         fig = go.Figure()
         fig.add_trace(go.Scatter(
-            x=df['Fecha'], y=df['Prob'], mode='lines+markers', name='Probabilidad',
-            fill='tozeroy', line=dict(color='#2f81f7', width=4), marker=dict(size=6, color='white')
+            x=df['Fecha'], y=df['Prob'], mode='lines+markers', name='Riesgo',
+            fill='tozeroy', 
+            line=dict(color='#2563EB', width=3), # Azul Institucional
+            marker=dict(size=6, color='white', line=dict(width=2, color='#2563EB'))
         ))
+        
         fig.update_layout(
-            template='plotly_dark', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            margin=dict(l=0, r=0, t=20, b=20), height=300,
-            yaxis=dict(tickformat='.0%', range=[0, 1], gridcolor='#30363d'),
-            xaxis=dict(gridcolor='#30363d', tickformat='%a %d')
+            paper_bgcolor='rgba(0,0,0,0)', 
+            plot_bgcolor='rgba(0,0,0,0)',
+            margin=dict(l=0, r=0, t=30, b=20), height=300,
+            yaxis=dict(tickformat='.0%', range=[0, 1], gridcolor='#E5E7EB'), # Rejilla gris suave
+            xaxis=dict(gridcolor='#E5E7EB', tickformat='%a %d'),
+            font=dict(color='#374151') # Texto del gráfico gris oscuro
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        # --- TABLA DE DATOS DETALLADA (AÑADIDA) ---
+        # TABLA DE DATOS
         st.markdown("---")
         st.markdown("#### 📋 Detalle de Datos")
         
-        # Preparar tabla para visualización limpia
         df_show = df.copy()
         df_show['Fecha'] = df_show['Fecha'].dt.strftime('%d-%m-%Y')
         df_show['Prob'] = df_show['Prob'].apply(lambda x: f"{x:.1%}")
         df_show['Max'] = df_show['Max'].apply(lambda x: f"{x:.1f} °C")
-        df_show.columns = ['Fecha', 'Probabilidad Lluvia', 'Temp. Máxima'] # Renombrar para que se vea bonito
+        df_show.columns = ['Fecha', 'Probabilidad Lluvia', 'Temp. Máxima']
         
         st.dataframe(df_show, use_container_width=True, hide_index=True)
 
 else:
-    st.info("👋 Pulsa el botón verde para descargar datos satelitales.")
+    st.info("👋 Pulsa el botón verde para iniciar el análisis.")
