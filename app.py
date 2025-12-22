@@ -9,122 +9,144 @@ import openmeteo_requests
 import requests_cache
 from retry_requests import retry
 
-# --- 1. CONFIGURACIÓN VISUAL (ESTILO CLARO / LIGHT MODE) ---
-st.set_page_config(page_title="MetAI Huechuraba", page_icon="⛈️", layout="centered")
+# --- 1. CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="MetAI Huechuraba", page_icon="📡", layout="wide")
 
-# URL de tu logo nuevo
+# URL del Logo
 LOGO_URL = "https://i.imgur.com/HjqQolt.png"
 
+# --- 2. ESTILOS CSS PERSONALIZADOS (MODERNO / DOCENTE) ---
 st.markdown("""
     <style>
-    /* 1. FONDO GENERAL (Gris Suave Profesional) */
-    .stApp {
-        background-color: #F0F2F6;
-        color: #1F2937;
+    /* Importar fuente moderna */
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Roboto', sans-serif;
     }
 
-    /* 2. TIPOGRAFÍA Y TEXTOS */
-    h1, h2, h3, h4 {
-        color: #111827 !important;
-        font-family: 'Inter', sans-serif;
-        font-weight: 700;
-    }
-    p, label, div {
-        color: #374151;
+    /* ESTILO BARRA LATERAL */
+    section[data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+        border-right: 1px solid #dee2e6;
     }
 
-    /* 3. CONTENEDORES / TARJETAS (Efecto "Card" Blanco) */
-    div[data-testid="metric-container"] {
-        background-color: #FFFFFF; /* Fondo blanco */
-        border: 1px solid #E5E7EB;
-        border-radius: 12px;
-        padding: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    div[data-testid="metric-container"] > div:nth-child(2) {
-        color: #1F2937 !important; /* Número oscuro fuerte */
-        font-weight: 800;
-    }
-    div[data-testid="metric-container"] > label {
-        color: #6B7280 !important; /* Etiqueta gris medio */
-    }
-
-    /* 4. BANNER AFTER SCHOOL (Estilo Institucional) */
-    .after-school-box {
-        background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); /* Azul degradado */
-        color: white !important;
+    /* ESTILO HEADER PRINCIPAL */
+    .main-header {
+        background: linear-gradient(90deg, #0052cc 0%, #00a3e0 100%);
         padding: 20px;
-        border-radius: 12px;
-        text-align: center;
-        margin-bottom: 25px;
-        box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+        border-radius: 15px;
+        color: white;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0, 82, 204, 0.2);
     }
-    .after-school-box strong {
+    .main-header h1 {
         color: white !important;
-        font-size: 1.1em;
+        margin: 0;
+        font-size: 2.2rem;
     }
-    .after-school-box span {
-        color: #DBEAFE !important;
+    .main-header h3 {
+        color: #e0e7ff !important;
+        margin: 0;
+        font-weight: 300;
+        font-size: 1.1rem;
     }
 
-    /* 5. BOTÓN PRINCIPAL */
+    /* TARJETAS DE RESULTADOS */
+    div[data-testid="metric-container"] {
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        transition: transform 0.2s;
+    }
+    div[data-testid="metric-container"]:hover {
+        transform: translateY(-2px);
+        border-color: #0052cc;
+    }
+
+    /* BOTÓN DE ACCIÓN */
     .stButton>button {
         width: 100%;
-        background-color: #10B981; /* Verde esmeralda */
-        color: white !important;
-        font-weight: bold;
-        border: none;
+        background-color: #10B981;
+        color: white;
         border-radius: 8px;
-        padding: 14px;
-        font-size: 16px;
-        transition: all 0.2s;
-        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+        font-weight: bold;
+        padding: 0.75rem;
+        border: none;
+        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
     }
     .stButton>button:hover {
         background-color: #059669;
-        transform: translateY(-2px);
-    }
-
-    /* 6. TABLA DE DATOS (Estilo limpio) */
-    [data-testid="stDataFrame"] {
-        background-color: white;
-        padding: 10px;
-        border-radius: 10px;
-        border: 1px solid #E5E7EB;
     }
     
-    /* 7. AJUSTES DEL LOGO */
-    .logo-img {
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-        max-width: 100%;
+    /* CAJA DE CÓDIGO (Librerías) */
+    .lib-box {
+        font-family: 'Courier New', monospace;
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 0.85rem;
+        border-left: 4px solid #0052cc;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. HEADER CON TU LOGO ---
-col_logo, col_text = st.columns([1, 3])
+# --- 3. BARRA LATERAL (INFORMACIÓN Y LIBRERÍAS) ---
+with st.sidebar:
+    st.image(LOGO_URL, use_container_width=True)
+    
+    st.markdown("### 🏫 Programa After School")
+    st.info("""
+    **Proyecto de Innovación Educativa**
+    Municipalidad de Huechuraba.
+    
+    Este software fue diseñado por estudiantes para aplicar conceptos de **Ciencia de Datos** en problemas reales de la comuna.
+    """)
+    
+    st.markdown("---")
+    st.markdown("### 🛠️ Librerías Utilizadas")
+    st.markdown("""
+    Este proyecto integra las tecnologías más potentes de Python para análisis de datos:
+    """)
+    
+    # Lista de librerías con estilo de código
+    st.markdown("""
+    <div class="lib-box">
+    import streamlit as web<br>
+    import pandas as data<br>
+    import sklearn as ai<br>
+    import xgboost as model<br>
+    import plotly as charts<br>
+    import openmeteo as sat
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.caption("v2.4.0 • Build for Education")
 
-with col_logo:
-    # Usamos HTML para controlar mejor el tamaño y centrado del logo
-    st.markdown(f'<img src="{LOGO_URL}" class="logo-img" width="130">', unsafe_allow_html=True)
+# --- 4. PANEL PRINCIPAL ---
 
-with col_text:
-    st.markdown("<div style='padding-top: 10px;'>", unsafe_allow_html=True)
-    st.markdown("# MetAI Huechuraba")
-    st.markdown("##### Inteligencia Artificial Meteorológica")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# --- 3. MENCIÓN PROGRAMA AFTER SCHOOL ---
+# Header Personalizado HTML
 st.markdown("""
-<div class="after-school-box">
-    🚀 <strong>Programa After School - Municipalidad de Huechuraba</strong><br>
-    <span>Innovación y Ciencia de Datos al servicio de la comunidad.</span>
+<div class="main-header">
+    <h1>MetAI Huechuraba</h1>
+    <h3>Sistema Inteligente de Predicción Meteorológica Local</h3>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 4. CARGA DE MODELOS ---
+# Descripción del funcionamiento (Explicación técnica simplificada)
+with st.expander("📘 ¿Cómo funciona este modelo?", expanded=True):
+    st.markdown("""
+    Este sistema no es un pronóstico tradicional. Es un modelo híbrido que combina:
+    1.  **Datos Históricos:** 15 años de comportamiento climático en la zona norte de Santiago.
+    2.  **Modelo XGBoost:** Un algoritmo de Inteligencia Artificial que detecta patrones complejos entre la Presión Atmosférica y la Temperatura.
+    3.  **Datos Satelitales:** Conexión en tiempo real con la API *Open-Meteo* para obtener las condiciones actuales.
+    """)
+
+# --- 5. CARGA DE MODELOS ---
 @st.cache_resource
 def load_models():
     try:
@@ -136,10 +158,10 @@ def load_models():
 modelo, scaler = load_models()
 
 if modelo is None:
-    st.error("⚠️ Error: No se encuentran los archivos del modelo IA.")
+    st.error("🚨 Error Crítico: Modelos IA no encontrados en el servidor.")
     st.stop()
 
-# --- 5. LÓGICA DE DATOS (Backend) ---
+# --- 6. LOGICA (Backend) ---
 def get_history():
     try:
         data = Daily('85574', datetime.now() - timedelta(days=15), datetime.now())
@@ -156,14 +178,11 @@ def get_forecast():
         s = requests_cache.CachedSession('.cache', expire_after=3600)
         r = retry(s, retries=5, backoff_factor=0.2)
         om = openmeteo_requests.Client(session=r)
-        
         params = {"latitude": -33.37, "longitude": -70.64, 
                   "daily": ["temperature_2m_max", "temperature_2m_min", "pressure_msl_mean"],
                   "timezone": "auto", "forecast_days": 8}
-        
         res = om.weather_api("https://api.open-meteo.com/v1/forecast", params=params)[0]
         daily = res.Daily()
-        
         d = {
             'tmax': daily.Variables(0).ValuesAsNumpy(),
             'tmin': daily.Variables(1).ValuesAsNumpy(),
@@ -176,19 +195,20 @@ def get_forecast():
         return d
     except: return None
 
-# --- 6. INTERFAZ ---
+# --- 7. INTERFAZ Y RESULTADOS ---
 
-col_b1, col_b2, col_b3 = st.columns([1, 2, 1])
-with col_b2:
-    btn_calc = st.button("ANALIZAR CLIMA AHORA")
+# Botón central
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    btn_run = st.button("🚀 EJECUTAR ANÁLISIS IA")
 
-if btn_calc:
-    with st.spinner("📡 Procesando datos satelitales..."):
+if btn_run:
+    with st.spinner("🔄 Descargando telemetría y procesando vectores..."):
         memoria = get_history()
         futuro = get_forecast()
         
         if memoria is None or futuro is None:
-            st.warning("⚠️ Sin conexión a datos externos.")
+            st.warning("⚠️ Error de conexión API.")
             st.stop()
 
         features_list = [
@@ -233,54 +253,48 @@ if btn_calc:
 
         df = pd.DataFrame(res)
         
-        # --- DISPLAY RESULTADOS ---
-        st.markdown("---")
+        # --- VISUALIZACIÓN ---
+        st.markdown("### 📊 Resultados del Modelo")
         hoy = df.iloc[0]
-        st.markdown(f"### 📅 Pronóstico: {hoy['Fecha'].strftime('%A %d')}")
         
+        # Métricas
         c1, c2, c3 = st.columns(3)
-        c1.metric("🌡️ Máxima", f"{hoy['Max']:.1f}°C")
-        c2.metric("💧 Riesgo Lluvia", f"{hoy['Prob']:.1%}")
+        c1.metric("🌡️ Temp. Máxima", f"{hoy['Max']:.1f}°C")
+        c2.metric("💧 Probabilidad Lluvia", f"{hoy['Prob']:.1%}", delta_color="inverse")
         
         with c3:
             st.write("")
-            if hoy['Prob'] > 0.5: st.error("☔ ALTO RIESGO")
-            elif hoy['Prob'] > 0.2: st.warning("☁️ POSIBLE")
-            else: st.success("☀️ SECO")
+            if hoy['Prob'] > 0.5: 
+                st.markdown("<div style='background:#fee2e2; color:#991b1b; padding:10px; border-radius:5px; text-align:center; font-weight:bold;'>☔ ALERTA DE LLUVIA</div>", unsafe_allow_html=True)
+            elif hoy['Prob'] > 0.2: 
+                st.markdown("<div style='background:#fef3c7; color:#92400e; padding:10px; border-radius:5px; text-align:center; font-weight:bold;'>☁️ NUBLADO / RIESGO</div>", unsafe_allow_html=True)
+            else: 
+                st.markdown("<div style='background:#d1fae5; color:#065f46; padding:10px; border-radius:5px; text-align:center; font-weight:bold;'>☀️ DÍA DESPEJADO</div>", unsafe_allow_html=True)
 
-        # GRÁFICO (Estilo Light)
+        # Gráfico
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("#### Tendencia Semanal")
-        
         fig = go.Figure()
         fig.add_trace(go.Scatter(
-            x=df['Fecha'], y=df['Prob'], mode='lines+markers', name='Riesgo',
-            fill='tozeroy', 
-            line=dict(color='#2563EB', width=3), # Azul Institucional
-            marker=dict(size=6, color='white', line=dict(width=2, color='#2563EB'))
+            x=df['Fecha'], y=df['Prob'], mode='lines+markers', name='Probabilidad',
+            fill='tozeroy', line=dict(color='#0052cc', width=3), marker=dict(size=7, color='white', line=dict(width=2, color='#0052cc'))
         ))
-        
         fig.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', 
-            plot_bgcolor='rgba(0,0,0,0)',
-            margin=dict(l=0, r=0, t=30, b=20), height=300,
-            yaxis=dict(tickformat='.0%', range=[0, 1], gridcolor='#E5E7EB'), # Rejilla gris suave
-            xaxis=dict(gridcolor='#E5E7EB', tickformat='%a %d'),
-            font=dict(color='#374151') # Texto del gráfico gris oscuro
+            title="Tendencia de Riesgo (Próximos 7 días)",
+            template='plotly_white',
+            margin=dict(l=20, r=20, t=40, b=20), height=350,
+            yaxis=dict(tickformat='.0%', range=[0, 1], title="Probabilidad (0-100%)"),
+            xaxis=dict(tickformat='%a %d')
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        # TABLA DE DATOS
-        st.markdown("---")
-        st.markdown("#### 📋 Detalle de Datos")
-        
+        # Tabla
+        st.markdown("### 📋 Datos Detallados")
         df_show = df.copy()
         df_show['Fecha'] = df_show['Fecha'].dt.strftime('%d-%m-%Y')
         df_show['Prob'] = df_show['Prob'].apply(lambda x: f"{x:.1%}")
         df_show['Max'] = df_show['Max'].apply(lambda x: f"{x:.1f} °C")
         df_show.columns = ['Fecha', 'Probabilidad Lluvia', 'Temp. Máxima']
-        
         st.dataframe(df_show, use_container_width=True, hide_index=True)
 
 else:
-    st.info("👋 Pulsa el botón verde para iniciar el análisis.")
+    st.info("👈 Revisa el panel lateral para más información sobre el proyecto.")
