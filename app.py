@@ -9,56 +9,74 @@ import openmeteo_requests
 import requests_cache
 from retry_requests import retry
 
-# --- 1. CONFIGURACIÓN DE PÁGINA Y ESTILO CSS ---
+# --- 1. CONFIGURACIÓN Y ESTILO (EL ARREGLO VISUAL) ---
 st.set_page_config(page_title="Santiago Weather IA", page_icon="⛈️", layout="centered")
 
-# CSS Personalizado para dar look "App Moderna"
 st.markdown("""
     <style>
-    /* Fondo degradado suave */
+    /* Fondo Degradado Profundo (Azul Noche) */
     .stApp {
-        background: linear-gradient(to bottom right, #1e3c72, #2a5298);
-        color: white;
+        background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+        background-attachment: fixed;
     }
-    /* Estilo de las métricas */
+    
+    /* Forzar texto blanco en títulos y párrafos */
+    h1, h2, h3, p, label, .stMarkdown {
+        color: #f0f2f6 !important;
+    }
+
+    /* Estilo para las Tarjetas de Métricas (Glassmorphism) */
     div[data-testid="metric-container"] {
-        background-color: rgba(255, 255, 255, 0.1);
-        padding: 15px;
-        border-radius: 10px;
-        backdrop-filter: blur(10px);
+        background-color: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        text-align: center;
+        padding: 15px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     }
-    /* Títulos */
-    h1, h2, h3 {
-        color: #ffffff !important;
-        font-family: 'Helvetica Neue', sans-serif;
+    div[data-testid="metric-container"] > label {
+        color: #a0a0a0 !important; /* Etiqueta gris claro */
     }
-    /* Botón principal */
+    div[data-testid="metric-container"] > div {
+        color: #ffffff !important; /* Valor blanco brillante */
+    }
+
+    /* Botón Principal */
     .stButton>button {
         width: 100%;
-        background-color: #ffcc00;
-        color: #000000;
+        background: linear-gradient(90deg, #ff8c00 0%, #ff0080 100%);
+        color: white;
         font-weight: bold;
-        border-radius: 20px;
         border: none;
-        padding: 10px 20px;
-        transition: all 0.3s;
+        border-radius: 25px;
+        padding: 12px 24px;
+        font-size: 16px;
+        transition: transform 0.2s;
+        box-shadow: 0 4px 15px rgba(255, 0, 128, 0.4);
     }
     .stButton>button:hover {
-        background-color: #ffd633;
-        transform: scale(1.02);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        transform: scale(1.03);
+        color: white;
+    }
+
+    /* Arreglo para la Tabla (Fondo blanco suave para leer datos) */
+    .stTable {
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 10px;
+        padding: 10px;
+        color: black !important;
+    }
+    /* Forzar color negro dentro de la tabla si es necesario */
+    .stTable td, .stTable th {
+        color: #333333 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# Encabezado
 st.title("⛈️ Santiago Weather AI")
-st.markdown("### Pronóstico Inteligente Híbrido (v3.0)")
-st.caption("Powered by XGBoost & Open-Meteo • Precisión basada en Presión Atmosférica")
+st.markdown("##### 🤖 Predicción Híbrida: XGBoost + Presión Atmosférica")
 
-# --- 2. CARGAR MODELOS (LÓGICA ORIGINAL) ---
+# --- 2. CARGAR MODELOS ---
 @st.cache_resource
 def load_models():
     try:
@@ -71,16 +89,14 @@ def load_models():
 modelo, scaler = load_models()
 
 if modelo is None:
-    st.error("🚨 Error Crítico: No se encuentran los archivos .joblib")
-    st.info("Por favor sube 'modelo_lluvia_v3.joblib' y 'scaler_lluvia_v3.joblib'")
+    st.error("🚨 Error: Faltan archivos .joblib. Súbelos a GitHub.")
     st.stop()
 
-# --- 3. FUNCIONES DE DATOS (LÓGICA ORIGINAL) ---
+# --- 3. FUNCIONES DE DATOS ---
 def get_history():
-    station_id = '85574' # Pudahuel
+    station_id = '85574'
     end = datetime.now()
     start = end - timedelta(days=15)
-    
     try:
         data = Daily(station_id, start, end)
         df = data.fetch()
@@ -92,60 +108,47 @@ def get_history():
         df = df.rename(columns={'prcp': 'prcp_hoy'})
         if len(df) < 3: return None
         return df.tail(3)
-    except:
-        return None
+    except: return None
 
 def get_forecast():
     try:
         cache_session = requests_cache.CachedSession('.cache', expire_after = 3600)
         retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
         openmeteo = openmeteo_requests.Client(session=retry_session)
-
         url = "https://api.open-meteo.com/v1/forecast"
         params = {
             "latitude": -33.3833, "longitude": -70.7833,
             "daily": ["temperature_2m_max", "temperature_2m_min", "pressure_msl_mean"],
             "timezone": "auto", "forecast_days": 8
         }
-        
         responses = openmeteo.weather_api(url, params=params)
         daily = responses[0].Daily()
-        
-        # Procesamiento
         daily_tmax = daily.Variables(0).ValuesAsNumpy()
         daily_tmin = daily.Variables(1).ValuesAsNumpy()
         daily_pres = daily.Variables(2).ValuesAsNumpy()
         daily_tavg = (daily_tmax + daily_tmin) / 2
-        
         dates = pd.date_range(
             start = pd.to_datetime(daily.Time(), unit = "s", utc = True),
             end = pd.to_datetime(daily.TimeEnd(), unit = "s", utc = True),
             freq = pd.Timedelta(seconds = daily.Interval()), inclusive = "left"
         )
-        
         return {'tmax': daily_tmax, 'tmin': daily_tmin, 'tavg': daily_tavg, 'pres': daily_pres, 'fechas': dates}
-    except:
-        return None
+    except: return None
 
-# --- 4. INTERFAZ Y PREDICCIÓN ---
+# --- 4. LÓGICA Y VISUALIZACIÓN ---
 
-col_btn1, col_btn2, col_btn3 = st.columns([1,2,1])
-with col_btn2:
-    run_btn = st.button("🔍 ANALIZAR CLIMA AHORA")
-
-if run_btn:
-    with st.spinner("📡 Consultando satélites y ejecutando red neuronal..."):
-        
+if st.button("🔮 Calcular Pronóstico de Riesgo"):
+    
+    with st.spinner("Conectando con satélites..."):
         memoria_df = get_history()
         pronostico = get_forecast()
         
         if memoria_df is None or pronostico is None:
-            st.error("⚠️ Error de conexión con los servicios meteorológicos.")
+            st.warning("⚠️ Sin conexión a datos externos. Revisa la API.")
             st.stop()
 
-        # --- Lógica de Predicción (Tu cerebro IA) ---
-        cols_base = ['tavg', 'tmin', 'tmax', 'prcp_hoy', 'lloviendo_hoy', 'pres']
-        features = [ # LISTA EXACTA V3.0
+        # Preparar Features (Exactas V3.0)
+        features = [
             'tavg', 'tmin', 'tmax', 'pres', 
             'dia_año_sen', 'dia_año_cos', 'dia_sem_sen', 'dia_sem_cos', 
             'tavg_lag_1', 'tavg_lag_2', 'tavg_lag_3', 
@@ -156,6 +159,7 @@ if run_btn:
             'pres_lag_1', 'pres_lag_2', 'pres_lag_3'
         ]
         
+        cols_base = ['tavg', 'tmin', 'tmax', 'prcp_hoy', 'lloviendo_hoy', 'pres']
         predicciones = []
         
         for i in range(1, 8):
@@ -180,8 +184,8 @@ if run_btn:
             
             for f in features:
                 if f not in datos_input.columns: datos_input[f] = 0
-            
             datos_input = datos_input[features]
+            
             datos_scaled = scaler.transform(datos_input)
             prob = modelo.predict_proba(datos_scaled)[0][1]
             
@@ -194,73 +198,75 @@ if run_btn:
             }])
             memoria_df = pd.concat([memoria_df.iloc[1:], nueva_fila], ignore_index=True)
 
-        # --- MOSTRAR RESULTADOS PREMIUM ---
         df_res = pd.DataFrame(predicciones)
         
-        # 1. Tarjeta Principal (Mañana)
+        # --- DISEÑO DE RESULTADOS ---
         mañana = df_res.iloc[0]
-        prob_mañana = mañana['Probabilidad']
-        fecha_mañana = mañana['Fecha'].strftime("%A %d")
+        prob_val = mañana['Probabilidad']
         
         st.markdown("---")
-        st.markdown(f"<h2 style='text-align: center;'>Pronóstico para Mañana: {fecha_mañana}</h2>", unsafe_allow_html=True)
+        st.markdown(f"### 🗓️ Pronóstico: {mañana['Fecha'].strftime('%A %d')}")
         
-        col_res1, col_res2, col_res3 = st.columns(3)
+        col1, col2, col3 = st.columns(3)
+        col1.metric("🌡️ Máxima", f"{mañana['T_Max']:.1f}°C")
+        col2.metric("💧 Riesgo Lluvia", f"{prob_val:.1%}")
         
-        col_res1.metric("🌡️ Máxima", f"{mañana['T_Max']:.1f}°C")
-        col_res2.metric("💧 Prob. Lluvia", f"{prob_mañana:.1%}")
-        
-        with col_res3:
-            if prob_mañana > 0.5:
-                st.error("☔ LLEVA PARAGUAS")
-            elif prob_mañana > 0.2:
-                st.warning("☁️ NUBLADO/RIESGO")
+        with col3:
+            st.write("") # Espaciador
+            if prob_val > 0.5:
+                st.error("☔ **ALTA PROBABILIDAD**")
+            elif prob_val > 0.2:
+                st.warning("☁️ **POSIBLE LLUVIA**")
             else:
-                st.success("😎 DÍA SECO")
-
-        # 2. Gráfico Interactivo (Plotly)
-        st.markdown("### 📅 Tendencia a 7 Días")
+                st.success("☀️ **DÍA SECO**")
         
-        # Crear gráfico moderno
+        # --- GRÁFICO CORREGIDO (MODO OSCURO) ---
+        st.markdown("### 📈 Tendencia Semanal")
+        
         fig = go.Figure()
         
-        # Área de probabilidad
+        # Línea de Probabilidad (Área con degradado)
         fig.add_trace(go.Scatter(
             x=df_res['Fecha'], y=df_res['Probabilidad'],
-            fill='tozeroy', mode='lines+markers',
-            name='Prob. Lluvia',
-            line=dict(color='#00CC96', width=3),
-            marker=dict(size=8)
+            mode='lines+markers',
+            name='Probabilidad',
+            fill='tozeroy',
+            line=dict(color='#00d2ff', width=3), # Cian brillante
+            marker=dict(size=8, color='white', line=dict(width=2, color='#00d2ff'))
         ))
         
-        # Línea de temperatura (eje secundario visual)
+        # Línea de Referencia de Temperatura
         fig.add_trace(go.Scatter(
-            x=df_res['Fecha'], y=df_res['T_Max']/40, # Normalizado visualmente
-            mode='lines', name='Temp (Ref)',
-            line=dict(color='#EF553B', width=2, dash='dot')
+            x=df_res['Fecha'], y=df_res['T_Max']/40, # Escalada para visualización
+            mode='lines',
+            name='Temp (Ref)',
+            line=dict(color='#ff9900', width=2, dash='dot')
         ))
 
         fig.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
+            template='plotly_dark', # <--- ESTO ARREGLA EL FONDO NEGRO/TEXTO
+            paper_bgcolor='rgba(0,0,0,0)', # Fondo transparente para integrarse
             plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white'),
-            xaxis=dict(showgrid=False),
-            yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)', tickformat='.0%'),
-            margin=dict(l=0, r=0, t=30, b=0),
-            height=300
+            margin=dict(l=10, r=10, t=30, b=10),
+            height=350,
+            yaxis=dict(tickformat='.0%', title="Probabilidad", gridcolor='rgba(255,255,255,0.1)'),
+            xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+            legend=dict(orientation="h", y=1.1)
         )
         
         st.plotly_chart(fig, use_container_width=True)
-
-        # 3. Tabla Detallada
-        with st.expander("Ver tabla de datos detallada"):
-            st.table(df_res.style.format({'Probabilidad': '{:.1%}', 'T_Max': '{:.1f}°C'}))
+        
+        # --- TABLA CORREGIDA ---
+        st.markdown("### 📋 Detalle de Datos")
+        # Usamos st.dataframe en lugar de table para mejor manejo de temas, 
+        # pero el CSS de arriba forzará que se vea claro.
+        df_display = df_res.copy()
+        df_display['Probabilidad'] = df_display['Probabilidad'].apply(lambda x: f"{x:.1%}")
+        df_display['T_Max'] = df_display['T_Max'].apply(lambda x: f"{x:.1f}°C")
+        df_display['Fecha'] = df_display['Fecha'].dt.strftime('%Y-%m-%d')
+        
+        st.dataframe(df_display, use_container_width=True, hide_index=True)
 
 else:
-    # Mensaje de bienvenida
-    st.markdown("""
-    <div style='text-align: center; padding: 50px; opacity: 0.7;'>
-        <h3>👈 Pulsa el botón para activar la IA</h3>
-        <p>El sistema descargará los últimos datos de presión atmosférica y calculará el riesgo real.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Pantalla de Inicio Limpia
+    st.info("👋 Pulsa el botón 'Calcular' para iniciar el análisis IA.")
