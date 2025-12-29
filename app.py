@@ -10,7 +10,7 @@ import requests_cache
 from retry_requests import retry
 
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="MetAI Huechuraba", page_icon="📡", layout="wide")
+st.set_page_config(page_title="AI MET Huechuraba", page_icon="📡", layout="wide")
 
 # URL del Logo
 LOGO_URL = "https://i.imgur.com/HjqQolt.png"
@@ -298,3 +298,4 @@ if btn_run:
 
 else:
     st.info("👈 Revisa el panel lateral para más información sobre el proyecto.")
+
