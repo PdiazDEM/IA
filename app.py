@@ -132,7 +132,7 @@ with st.sidebar:
 # Header Personalizado HTML
 st.markdown("""
 <div class="main-header">
-    <h1>MetAI Huechuraba</h1>
+    <h1>AI MET Huechuraba</h1>
     <h3>Sistema Inteligente de Predicción Meteorológica Local</h3>
 </div>
 """, unsafe_allow_html=True)
@@ -298,4 +298,5 @@ if btn_run:
 
 else:
     st.info("👈 Revisa el panel lateral para más información sobre el proyecto.")
+
 
